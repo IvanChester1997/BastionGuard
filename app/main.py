@@ -12,6 +12,7 @@ from app.scanners.network_scanner import NetworkScanner
 from app.scanners.hardening_scanner import HardeningScanner
 from app.scanners.world_writable_scanner import WorldWritableScanner
 from app.scanners.suid_sgid_scanner import SUIDSGIDScanner
+from app.scanners.cron_timers_scanner import CronTimersScanner
 
 load_dotenv()
 
@@ -39,6 +40,7 @@ def run():
     hardening_result = HardeningScanner(client).scan()
     world_writable_result = WorldWritableScanner(client).scan()
     suid_sgid_result = SUIDSGIDScanner(client).scan()
+    cron_timers_result = CronTimersScanner(client).scan()
 
     report = {
         "host": os.getenv("SSH_HOST"),
@@ -50,6 +52,7 @@ def run():
         "hardening": hardening_result,
         "world_writable": world_writable_result,
         "suid_sgid": suid_sgid_result,
+        "cron_timers": cron_timers_result,
     }
 
     report_json = json.dumps(report, indent=4, ensure_ascii=False)
