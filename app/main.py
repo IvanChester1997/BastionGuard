@@ -11,6 +11,7 @@ from app.scanners.services_scanner import ServicesScanner
 from app.scanners.network_scanner import NetworkScanner
 from app.scanners.hardening_scanner import HardeningScanner
 from app.scanners.world_writable_scanner import WorldWritableScanner
+from app.scanners.suid_sgid_scanner import SUIDSGIDScanner
 
 load_dotenv()
 
@@ -37,6 +38,7 @@ def run():
     network_result = NetworkScanner(client).scan()
     hardening_result = HardeningScanner(client).scan()
     world_writable_result = WorldWritableScanner(client).scan()
+    suid_sgid_result = SUIDSGIDScanner(client).scan()
 
     report = {
         "host": os.getenv("SSH_HOST"),
@@ -47,6 +49,7 @@ def run():
         "network": network_result,
         "hardening": hardening_result,
         "world_writable": world_writable_result,
+        "suid_sgid": suid_sgid_result,
     }
 
     report_json = json.dumps(report, indent=4, ensure_ascii=False)
