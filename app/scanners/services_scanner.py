@@ -47,7 +47,10 @@ class ServicesScanner:
 
             process = None
 
-            process_match = re.search(r'users:\(\("([^"]+)"', line)
+            process_match = re.search(
+                r'users:\(\("([^"]+)"',
+                line,
+            )
 
             if process_match:
                 process = process_match.group(1)
@@ -75,6 +78,24 @@ class ServicesScanner:
 
             listeners.append(listener)
 
+            if self._is_external_address(address):
+
+                process_name = process or "unknown"
+
+                findings.append(
+                    Finding(
+                        severity="medium",
+                        title="External service exposure",
+                        description=(
+                            f"Service {process_name} is listening "
+                            f"on externally accessible address "
+                            f"{address}:{port}. "
+                            "Verify firewall rules and whether "
+                            "this service should be network accessible."
+                        ),
+                    ).to_dict()
+                )
+
             if process:
 
                 process_lower = process.lower()
@@ -100,3 +121,25 @@ class ServicesScanner:
             "listeners": listeners,
             "findings": findings,
         }
+
+    @staticmethod
+    def _is_external_address(address):
+
+        normalized = address.strip("[]")
+
+        if normalized in (
+            "127.0.0.1",
+            "::1",
+        ):
+            return False
+
+        if normalized == "0.0.0.0":
+            return True
+
+        if normalized == "::":
+            return True
+
+        if normalized.startswith("127."):
+            return False
+
+        return True
