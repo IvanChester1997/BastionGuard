@@ -4,6 +4,7 @@ import json
 from dotenv import load_dotenv
 
 from app.services.ssh_client import SSHClient
+from app.services.risk_scoring import RiskScoring
 from app.scanners.ssh_scanner import SSHScanner
 from app.scanners.users_scanner import UsersScanner
 from app.scanners.updates_scanner import UpdatesScanner
@@ -60,6 +61,9 @@ def run():
         "firewall": firewall_result,
         "password_policy": password_policy_result,
     }
+
+    risk_result = RiskScoring.calculate(report)
+    report["risk"] = risk_result
 
     report_json = json.dumps(report, indent=4, ensure_ascii=False)
 
