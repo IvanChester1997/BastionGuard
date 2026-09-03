@@ -16,6 +16,7 @@ from app.scanners.suid_sgid_scanner import SUIDSGIDScanner
 from app.scanners.cron_timers_scanner import CronTimersScanner
 from app.scanners.firewall_scanner import FirewallScanner
 from app.scanners.password_policy_scanner import PasswordPolicyScanner
+from app.scanners.docker_scanner import DockerScanner
 
 load_dotenv()
 
@@ -46,6 +47,7 @@ def run():
     cron_timers_result = CronTimersScanner(client).scan()
     firewall_result = FirewallScanner(client).scan()
     password_policy_result = PasswordPolicyScanner(client).scan()
+    docker_result = DockerScanner(client).scan()
 
     report = {
         "host": os.getenv("SSH_HOST"),
@@ -60,6 +62,7 @@ def run():
         "cron_timers": cron_timers_result,
         "firewall": firewall_result,
         "password_policy": password_policy_result,
+        "docker": docker_result,
     }
 
     risk_result = RiskScoring.calculate(report)
