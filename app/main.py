@@ -7,6 +7,7 @@ from app.services.ssh_client import SSHClient
 from app.scanners.ssh_scanner import SSHScanner
 from app.scanners.users_scanner import UsersScanner
 from app.scanners.updates_scanner import UpdatesScanner
+from app.scanners.services_scanner import ServicesScanner
 
 load_dotenv()
 
@@ -29,12 +30,14 @@ def run():
 
     users_result = UsersScanner(client).scan()
     updates_result = UpdatesScanner(client).scan()
+    services_result = ServicesScanner(client).scan()
 
     report = {
         "host": os.getenv("SSH_HOST"),
         "ssh": ssh_result,
         "users": users_result,
         "updates": updates_result,
+        "services": services_result,
     }
 
     report_json = json.dumps(report, indent=4, ensure_ascii=False)
