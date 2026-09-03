@@ -1,0 +1,49 @@
+import os
+import json
+
+from dotenv import load_dotenv
+
+from app.services.ssh_client import SSHClient
+from app.scanners.ssh_scanner import SSHScanner
+from app.scanners.users_scanner import UsersScanner
+from app.scanners.updates_scanner import UpdatesScanner
+
+load_dotenv()
+
+
+def build_client():
+
+    return SSHClient(
+        host=os.getenv("SSH_HOST"),
+        username=os.getenv("SSH_USER"),
+        key_path=os.getenv("SSH_KEY"),
+        port=int(os.getenv("SSH_PORT")),
+    )
+
+
+def run():
+
+    client = build_client()
+
+    ssh_result = SSHScanner(client).scan()
+
+    users_result = UsersScanner(client).scan()
+    updates_result = UpdatesScanner(client).scan()
+
+    report = {
+        "host": os.getenv("SSH_HOST"),
+        "ssh": ssh_result,
+        "users": users_result,
+        "updates": updates_result,
+    }
+
+    report_json = json.dumps(report, indent=4, ensure_ascii=False)
+
+    print(report_json)
+
+    with open("reports/latest_report.json", "w", encoding="utf-8") as f:
+        f.write(report_json)
+
+
+if __name__ == "__main__":
+    run()
