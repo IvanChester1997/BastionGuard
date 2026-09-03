@@ -14,6 +14,7 @@ from app.scanners.world_writable_scanner import WorldWritableScanner
 from app.scanners.suid_sgid_scanner import SUIDSGIDScanner
 from app.scanners.cron_timers_scanner import CronTimersScanner
 from app.scanners.firewall_scanner import FirewallScanner
+from app.scanners.password_policy_scanner import PasswordPolicyScanner
 
 load_dotenv()
 
@@ -43,6 +44,7 @@ def run():
     suid_sgid_result = SUIDSGIDScanner(client).scan()
     cron_timers_result = CronTimersScanner(client).scan()
     firewall_result = FirewallScanner(client).scan()
+    password_policy_result = PasswordPolicyScanner(client).scan()
 
     report = {
         "host": os.getenv("SSH_HOST"),
@@ -56,6 +58,7 @@ def run():
         "suid_sgid": suid_sgid_result,
         "cron_timers": cron_timers_result,
         "firewall": firewall_result,
+        "password_policy": password_policy_result,
     }
 
     report_json = json.dumps(report, indent=4, ensure_ascii=False)
