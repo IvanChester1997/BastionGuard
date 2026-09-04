@@ -13,17 +13,22 @@ class SSHClient:
         self,
         host: str,
         username: str,
-        key_path: str,
+        key_path: str | None = None,
+        password: str | None = None,
         port: int = 22,
     ):
         self.host = host
         self.username = username
         self.key_path = key_path
+        self.password = password
         self.port = port
         self._client = None
         self._key = None
 
     def _load_key(self):
+        if self.key_path is None:
+            return None
+
         if self._key is None:
             try:
                 self._key = paramiko.Ed25519Key.from_private_key_file(
@@ -38,28 +43,38 @@ class SSHClient:
                 raise SSHConnectionError(
                     f"Invalid SSH key at '{self.key_path}': {exc}"
                 ) from exc
+
         return self._key
 
     def _connect(self):
         if self._client is not None:
             return self._client
 
-        key = self._load_key()
         client = paramiko.SSHClient()
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
         try:
-            client.connect(
-                hostname=self.host,
-                username=self.username,
-                pkey=key,
-                port=self.port,
-            )
+            if self.key_path:
+                client.connect(
+                    hostname=self.host,
+                    username=self.username,
+                    pkey=self._load_key(),
+                    port=self.port,
+                )
+            else:
+                client.connect(
+                    hostname=self.host,
+                    username=self.username,
+                    password=self.password,
+                    port=self.port,
+                )
+
         except paramiko.AuthenticationException as exc:
             raise SSHConnectionError(
                 f"Authentication failed for "
                 f"{self.username}@{self.host}:{self.port}"
             ) from exc
+
         except (paramiko.SSHException, socket.error, OSError) as exc:
             raise SSHConnectionError(
                 f"Could not connect to {self.host}:{self.port} — {exc}"
@@ -75,6 +90,7 @@ class SSHClient:
             stdin, stdout, stderr = client.exec_command(command)
             output = stdout.read().decode()
             error = stderr.read().decode()
+
         except (paramiko.SSHException, socket.error, OSError) as exc:
             raise SSHConnectionError(
                 f"Failed to execute '{command}' on {self.host}: {exc}"

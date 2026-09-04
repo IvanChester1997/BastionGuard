@@ -24,28 +24,33 @@ load_dotenv()
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(
-        description="BastionGuard Linux Security Auditor"
-    )
+    parser = argparse.ArgumentParser(description="BastionGuard Linux Security Auditor")
 
     parser.add_argument("--host")
     parser.add_argument("--user")
     parser.add_argument("--key")
+    parser.add_argument("--password")
     parser.add_argument("--port", type=int)
 
     return parser.parse_args()
 
 
 def build_client(args):
+    key_path = args.key
+    password = args.password
+
+    if password is None:
+        key_path = key_path or os.getenv("SSH_KEY")
+
     return SSHClient(
         host=args.host or os.getenv("SSH_HOST"),
         username=args.user or os.getenv("SSH_USER"),
-        key_path=args.key or os.getenv("SSH_KEY"),
+        key_path=key_path,
+        password=password,
         port=args.port or int(os.getenv("SSH_PORT")),
     )
 
 
-# Порядок важен: секции добавляются в отчёт в этом же порядке.
 SCANNERS = [
     ("ssh", SSHScanner),
     ("users", UsersScanner),
