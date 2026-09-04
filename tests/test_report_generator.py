@@ -141,3 +141,58 @@ def test_generate_html_escapes_html():
     assert "<b>unsafe</b>" not in html
     assert "<img src=x>" not in html
     assert "&lt;script&gt;" in html
+
+def test_generate_pdf_creates_file(tmp_path):
+    from app.services.pdf_report_generator import PDFReportGenerator
+
+    report = {
+        "host": "test-host",
+        "risk": {
+            "score": 35,
+            "level": "HIGH",
+        },
+    }
+
+    output_path = tmp_path / "report.pdf"
+
+    PDFReportGenerator.generate(report, str(output_path))
+
+    assert output_path.exists()
+    assert output_path.stat().st_size > 0
+
+
+def test_generate_pdf_contains_report_data(tmp_path):
+    from app.services.pdf_report_generator import PDFReportGenerator
+    from pypdf import PdfReader
+
+    report = {
+        "host": "test-host",
+        "risk": {
+            "score": 85,
+            "level": "CRITICAL",
+        },
+        "ssh": {
+            "findings": [
+                {
+                    "severity": "high",
+                    "title": "Root Login Enabled",
+                    "description": "Root login is enabled",
+                    "remediation": "Disable PermitRootLogin",
+                }
+            ]
+        },
+    }
+
+    output_path = tmp_path / "report.pdf"
+
+    PDFReportGenerator.generate(report, str(output_path))
+
+    reader = PdfReader(str(output_path))
+    text = "\n".join(page.extract_text() or "" for page in reader.pages)
+
+    assert "BastionGuard Security Report" in text
+    assert "test-host" in text
+    assert "85" in text
+    assert "CRITICAL" in text
+    assert "Root Login Enabled" in text
+    assert "Disable PermitRootLogin" in text
