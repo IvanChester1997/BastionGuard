@@ -39,3 +39,33 @@ def test_build_client_uses_password():
     assert client.key_path is None
     assert client.password == "secret123"
     assert client.port == 22
+
+
+def test_load_hosts_ignores_comments_empty_lines_and_duplicates(tmp_path):
+    from app.main import load_hosts
+
+    hosts_file = tmp_path / "hosts.txt"
+    hosts_file.write_text(
+        "# production\n"
+        "\n"
+        "10.0.0.1\n"
+        "10.0.0.2\n"
+        "10.0.0.1\n",
+        encoding="utf-8",
+    )
+
+    assert load_hosts(str(hosts_file)) == [
+        "10.0.0.1",
+        "10.0.0.2",
+    ]
+
+
+def test_load_hosts_rejects_empty_file(tmp_path):
+    from app.main import load_hosts
+    import pytest
+
+    hosts_file = tmp_path / "hosts.txt"
+    hosts_file.write_text("# no hosts\n\n", encoding="utf-8")
+
+    with pytest.raises(ValueError):
+        load_hosts(str(hosts_file))

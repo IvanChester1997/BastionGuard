@@ -49,6 +49,10 @@ def parse_args():
         action="store_true",
         help="Print full JSON report to stdout",
     )
+    parser.add_argument(
+        "--hosts-file",
+        help="Scan multiple hosts from a newline-separated file",
+    )
 
     return parser.parse_args()
 
@@ -267,10 +271,172 @@ def run(args):
         )
 
 
+def load_hosts(path):
+    with open(path, "r", encoding="utf-8") as f:
+        hosts = []
+
+        for line in f:
+            host = line.strip()
+
+            if not host or host.startswith("#"):
+                continue
+
+            if host not in hosts:
+                hosts.append(host)
+
+    if not hosts:
+        raise ValueError(f"No hosts found in {path}")
+
+    return hosts
+
+
+def run_multi_host(args):
+    hosts = load_hosts(args.hosts_file)
+    results = []
+
+    os.makedirs("reports", exist_ok=True)
+
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+
+    for index, host in enumerate(hosts, start=1):
+        host_args = argparse.Namespace(
+            host=host,
+            user=args.user,
+            key=args.key,
+            password=args.password,
+            port=args.port,
+            json=True,
+            interactive=False,
+        )
+
+        if not args.json:
+            console.print(
+                f"\n[bold]Host {index}/{len(hosts)}:[/bold] {host}"
+            )
+
+        try:
+            client = build_client(host_args)
+
+            report = {
+                "host": host,
+            }
+
+            for section_name, scanner_cls in SCANNERS:
+                report[section_name] = scanner_cls(client).scan()
+
+            report["risk"] = RiskScoring.calculate(report)
+            results.append(report)
+
+            safe_host = (
+                host.replace("/", "_")
+                .replace(":", "_")
+                .replace("\\", "_")
+            )
+
+            json_path = f"reports/{timestamp}_{safe_host}.json"
+            html_path = f"reports/{timestamp}_{safe_host}.html"
+            pdf_path = f"reports/{timestamp}_{safe_host}.pdf"
+
+            report_json = json.dumps(
+                report,
+                indent=4,
+                ensure_ascii=False,
+            )
+
+            with open(json_path, "w", encoding="utf-8") as f:
+                f.write(report_json)
+
+            html_report = ReportGenerator.generate_html(report)
+
+            with open(html_path, "w", encoding="utf-8") as f:
+                f.write(html_report)
+
+            PDFReportGenerator.generate(report, pdf_path)
+
+        except SSHConnectionError as exc:
+            results.append(
+                {
+                    "host": host,
+                    "error": str(exc),
+                    "risk": {
+                        "score": 0,
+                        "level": "ERROR",
+                    },
+                }
+            )
+
+        except Exception as exc:
+            results.append(
+                {
+                    "host": host,
+                    "error": str(exc),
+                    "risk": {
+                        "score": 0,
+                        "level": "ERROR",
+                    },
+                }
+            )
+
+    multi_report = {
+        "scan_type": "multi_host",
+        "hosts_count": len(hosts),
+        "successful": sum("error" not in r for r in results),
+        "failed": sum("error" in r for r in results),
+        "hosts": results,
+    }
+
+    report_json = json.dumps(
+        multi_report,
+        indent=4,
+        ensure_ascii=False,
+    )
+
+    history_path = f"reports/multi_{timestamp}.json"
+
+    with open(history_path, "w", encoding="utf-8") as f:
+        f.write(report_json)
+
+    with open(
+        "reports/latest_multi_report.json",
+        "w",
+        encoding="utf-8",
+    ) as f:
+        f.write(report_json)
+
+    if args.json:
+        print(report_json)
+    else:
+        console.print(
+            Panel.fit(
+                f"[bold]Hosts:[/bold] {len(hosts)}\n"
+                f"[bold]Successful:[/bold] {multi_report['successful']}\n"
+                f"[bold]Failed:[/bold] {multi_report['failed']}",
+                title="Multi-host Security Audit",
+            )
+        )
+
+        console.print(
+            Panel.fit(
+                f"JSON : {history_path}\n"
+                "Latest: reports/latest_multi_report.json\n"
+                f"Per-host reports: reports/{timestamp}_*",
+                title="Reports",
+            )
+        )
+
+    return multi_report
+
+
 if __name__ == "__main__":
     args = parse_args()
 
-    if args.interactive:
-        args = prompt_for_missing_args(args)
+    if args.hosts_file:
+        if args.interactive:
+            raise SystemExit("--interactive cannot be used with --hosts-file")
 
-    run(args)
+        run_multi_host(args)
+    else:
+        if args.interactive:
+            args = prompt_for_missing_args(args)
+
+        run(args)
