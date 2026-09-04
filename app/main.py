@@ -13,6 +13,7 @@ from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn
 from app.services.ssh_client import SSHClient, SSHConnectionError
 from app.services.risk_scoring import RiskScoring
 from app.services.report_generator import ReportGenerator
+from app.services.pdf_report_generator import PDFReportGenerator
 from app.scanners.ssh_scanner import SSHScanner
 from app.scanners.users_scanner import UsersScanner
 from app.scanners.updates_scanner import UpdatesScanner
@@ -195,6 +196,7 @@ def run(args):
 
     history_json_path = f"reports/{timestamp}.json"
     history_html_path = f"reports/{timestamp}.html"
+    history_pdf_path = f"reports/{timestamp}.pdf"
 
     with open(
         history_json_path,
@@ -212,6 +214,8 @@ def run(args):
     ) as f:
         f.write(html_report)
 
+    PDFReportGenerator.generate(report, history_pdf_path)
+
     report_path = "reports/latest_report.json"
 
     with open(
@@ -227,6 +231,9 @@ def run(args):
         encoding="utf-8",
     ) as f:
         f.write(html_report)
+
+    pdf_report_path = "reports/latest_report.pdf"
+    PDFReportGenerator.generate(report, pdf_report_path)
 
     if args.json:
         print(report_json)
@@ -253,7 +260,8 @@ def run(args):
         console.print(
             Panel.fit(
                 f"JSON : {report_path}\n"
-                "HTML : reports/latest_report.html",
+                "HTML : reports/latest_report.html\n"
+                "PDF  : reports/latest_report.pdf",
                 title="Reports",
             )
         )
