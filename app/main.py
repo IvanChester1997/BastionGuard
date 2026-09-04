@@ -1,4 +1,5 @@
 import argparse
+import getpass
 import json
 import os
 import sys
@@ -31,8 +32,48 @@ def parse_args():
     parser.add_argument("--key")
     parser.add_argument("--password")
     parser.add_argument("--port", type=int)
+    parser.add_argument(
+        "--interactive",
+        action="store_true",
+    )
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Print full JSON report to stdout",
+    )
 
     return parser.parse_args()
+
+
+def prompt_for_missing_args(args):
+    print("\nBastionGuard Security Auditor\n")
+
+    if not args.host:
+        args.host = input("Host: ").strip()
+
+    if not args.user:
+        args.user = input("User: ").strip()
+
+    if not args.port:
+        port = input("Port [22]: ").strip()
+        args.port = int(port) if port else 22
+
+    print("\nAuthentication:")
+    print("1) SSH Key")
+    print("2) Password")
+
+    auth_type = input("Select [1/2]: ").strip()
+
+    if auth_type == "2":
+        args.password = getpass.getpass("Password: ")
+        args.key = None
+    else:
+        args.key = input("SSH Key Path [/root/.ssh/id_ed25519]: ").strip()
+
+        if not args.key:
+            args.key = "/root/.ssh/id_ed25519"
+
+    return args
 
 
 def build_client(args):
@@ -76,18 +117,18 @@ def run(args):
 
     for section_name, scanner_cls in SCANNERS:
         try:
+            if not args.json:
+                print(f"[+] Running {section_name} scanner...")
             report[section_name] = scanner_cls(client).scan()
         except SSHConnectionError as exc:
             print(
-                f"[FATAL] Scanner '{section_name}' failed due to an SSH "
-                f"error: {exc}",
+                f"[FATAL] Scanner '{section_name}' failed due to an SSH error: {exc}",
                 file=sys.stderr,
             )
             sys.exit(1)
         except Exception as exc:
             print(
-                f"[FATAL] Scanner '{section_name}' raised an unexpected "
-                f"error: {exc}",
+                f"[FATAL] Scanner '{section_name}' raised an unexpected error: {exc}",
                 file=sys.stderr,
             )
             raise
@@ -101,15 +142,31 @@ def run(args):
         ensure_ascii=False,
     )
 
-    print(report_json)
+    report_path = "reports/latest_report.json"
 
     with open(
-        "reports/latest_report.json",
+        report_path,
         "w",
         encoding="utf-8",
     ) as f:
         f.write(report_json)
 
+    if args.json:
+        print(report_json)
+    else:
+        print()
+        print("=" * 40)
+        print(f"Host       : {report['host']}")
+        print(f"Risk Score : {risk_result['score']}")
+        print(f"Risk Level : {risk_result['level']}")
+        print(f"Report     : {report_path}")
+        print("=" * 40)
+
 
 if __name__ == "__main__":
-    run(parse_args())
+    args = parse_args()
+
+    if args.interactive:
+        args = prompt_for_missing_args(args)
+
+    run(args)

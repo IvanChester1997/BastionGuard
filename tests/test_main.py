@@ -10,6 +10,7 @@ def test_build_client_uses_cli_arguments():
         key="/tmp/test_key",
         password=None,
         port=2222,
+        json=False,
     )
 
     client = build_client(args)
@@ -28,6 +29,7 @@ def test_build_client_uses_password():
         key=None,
         password="secret123",
         port=22,
+        json=False,
     )
 
     client = build_client(args)
