@@ -1,6 +1,7 @@
+import argparse
+import json
 import os
 import sys
-import json
 
 from dotenv import load_dotenv
 
@@ -22,12 +23,25 @@ from app.scanners.docker_scanner import DockerScanner
 load_dotenv()
 
 
-def build_client():
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description="BastionGuard Linux Security Auditor"
+    )
+
+    parser.add_argument("--host")
+    parser.add_argument("--user")
+    parser.add_argument("--key")
+    parser.add_argument("--port", type=int)
+
+    return parser.parse_args()
+
+
+def build_client(args):
     return SSHClient(
-        host=os.getenv("SSH_HOST"),
-        username=os.getenv("SSH_USER"),
-        key_path=os.getenv("SSH_KEY"),
-        port=int(os.getenv("SSH_PORT")),
+        host=args.host or os.getenv("SSH_HOST"),
+        username=args.user or os.getenv("SSH_USER"),
+        key_path=args.key or os.getenv("SSH_KEY"),
+        port=args.port or int(os.getenv("SSH_PORT")),
     )
 
 
@@ -48,9 +62,12 @@ SCANNERS = [
 ]
 
 
-def run():
-    client = build_client()
-    report = {"host": os.getenv("SSH_HOST")}
+def run(args):
+    client = build_client(args)
+
+    report = {
+        "host": args.host or os.getenv("SSH_HOST"),
+    }
 
     for section_name, scanner_cls in SCANNERS:
         try:
@@ -73,13 +90,21 @@ def run():
     risk_result = RiskScoring.calculate(report)
     report["risk"] = risk_result
 
-    report_json = json.dumps(report, indent=4, ensure_ascii=False)
+    report_json = json.dumps(
+        report,
+        indent=4,
+        ensure_ascii=False,
+    )
 
     print(report_json)
 
-    with open("reports/latest_report.json", "w", encoding="utf-8") as f:
+    with open(
+        "reports/latest_report.json",
+        "w",
+        encoding="utf-8",
+    ) as f:
         f.write(report_json)
 
 
 if __name__ == "__main__":
-    run()
+    run(parse_args())
