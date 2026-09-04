@@ -1,0 +1,193 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>BastionGuard Report</title>
+<style>
+body {
+    font-family: Arial, sans-serif;
+    margin: 40px;
+}
+
+h1 {
+    color: #222;
+}
+
+.section {
+    margin-top: 25px;
+    padding: 15px;
+    border: 1px solid #ddd;
+}
+
+.finding {
+    margin-top: 10px;
+    padding: 10px;
+    background: #f5f5f5;
+}
+
+.severity {
+    font-weight: bold;
+}
+</style>
+</head>
+<body>
+
+<h1>BastionGuard Security Report</h1>
+
+<p><strong>Host:</strong> 192.168.1.40</p>
+<p><strong>Risk Score:</strong> 35</p>
+<p><strong>Risk Level:</strong> HIGH</p>
+
+<div class="section">
+<h2>ssh</h2>
+</div>
+<div class="section">
+<h2>users</h2>
+</div>
+<div class="section">
+<h2>updates</h2>
+</div>
+<div class="section">
+<h2>services</h2>
+
+<div class="finding">
+<div class="severity">
+Severity: medium
+</div>
+
+<div>
+External service exposure
+</div>
+
+<div>
+Service unknown is listening on externally accessible address 10.255.255.254:53. Verify firewall rules and whether this service should be network accessible.
+</div>
+
+<div>
+<strong>Remediation:</strong>
+None
+</div>
+</div>
+
+<div class="finding">
+<div class="severity">
+Severity: medium
+</div>
+
+<div>
+External service exposure
+</div>
+
+<div>
+Service unknown is listening on externally accessible address 0.0.0.0:22. Verify firewall rules and whether this service should be network accessible.
+</div>
+
+<div>
+<strong>Remediation:</strong>
+None
+</div>
+</div>
+
+<div class="finding">
+<div class="severity">
+Severity: medium
+</div>
+
+<div>
+External service exposure
+</div>
+
+<div>
+Service unknown is listening on externally accessible address 10.255.255.254:53. Verify firewall rules and whether this service should be network accessible.
+</div>
+
+<div>
+<strong>Remediation:</strong>
+None
+</div>
+</div>
+
+<div class="finding">
+<div class="severity">
+Severity: medium
+</div>
+
+<div>
+External service exposure
+</div>
+
+<div>
+Service unknown is listening on externally accessible address [::]:22. Verify firewall rules and whether this service should be network accessible.
+</div>
+
+<div>
+<strong>Remediation:</strong>
+None
+</div>
+</div>
+</div>
+<div class="section">
+<h2>network</h2>
+</div>
+<div class="section">
+<h2>hardening</h2>
+</div>
+<div class="section">
+<h2>world_writable</h2>
+</div>
+<div class="section">
+<h2>suid_sgid</h2>
+</div>
+<div class="section">
+<h2>cron_timers</h2>
+</div>
+<div class="section">
+<h2>firewall</h2>
+
+<div class="finding">
+<div class="severity">
+Severity: high
+</div>
+
+<div>
+Firewall disabled
+</div>
+
+<div>
+UFW firewall is not active
+</div>
+
+<div>
+<strong>Remediation:</strong>
+None
+</div>
+</div>
+</div>
+<div class="section">
+<h2>password_policy</h2>
+
+<div class="finding">
+<div class="severity">
+Severity: medium
+</div>
+
+<div>
+Password expiration period is too long
+</div>
+
+<div>
+PASS_MAX_DAYS is set to 99999. Consider reducing it to 365 days or less.
+</div>
+
+<div>
+<strong>Remediation:</strong>
+None
+</div>
+</div>
+</div>
+<div class="section">
+<h2>docker</h2>
+</div>
+</body>
+</html>

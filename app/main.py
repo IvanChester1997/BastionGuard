@@ -1,6 +1,7 @@
 import argparse
 import getpass
 import json
+from datetime import datetime
 import os
 import sys
 
@@ -8,6 +9,7 @@ from dotenv import load_dotenv
 
 from app.services.ssh_client import SSHClient, SSHConnectionError
 from app.services.risk_scoring import RiskScoring
+from app.services.report_generator import ReportGenerator
 from app.scanners.ssh_scanner import SSHScanner
 from app.scanners.users_scanner import UsersScanner
 from app.scanners.updates_scanner import UpdatesScanner
@@ -142,6 +144,27 @@ def run(args):
         ensure_ascii=False,
     )
 
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+
+    history_json_path = f"reports/{timestamp}.json"
+    history_html_path = f"reports/{timestamp}.html"
+
+    with open(
+        history_json_path,
+        "w",
+        encoding="utf-8",
+    ) as f:
+        f.write(report_json)
+
+    html_report = ReportGenerator.generate_html(report)
+
+    with open(
+        history_html_path,
+        "w",
+        encoding="utf-8",
+    ) as f:
+        f.write(html_report)
+
     report_path = "reports/latest_report.json"
 
     with open(
@@ -150,6 +173,13 @@ def run(args):
         encoding="utf-8",
     ) as f:
         f.write(report_json)
+
+    with open(
+        "reports/latest_report.html",
+        "w",
+        encoding="utf-8",
+    ) as f:
+        f.write(html_report)
 
     if args.json:
         print(report_json)
@@ -160,6 +190,7 @@ def run(args):
         print(f"Risk Score : {risk_result['score']}")
         print(f"Risk Level : {risk_result['level']}")
         print(f"Report     : {report_path}")
+        print("HTML Report: reports/latest_report.html")
         print("=" * 40)
 
 
