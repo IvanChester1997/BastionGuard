@@ -6,6 +6,9 @@ import os
 import sys
 
 from dotenv import load_dotenv
+from rich.console import Console
+from rich.panel import Panel
+from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn
 
 from app.services.ssh_client import SSHClient, SSHConnectionError
 from app.services.risk_scoring import RiskScoring
@@ -24,6 +27,8 @@ from app.scanners.password_policy_scanner import PasswordPolicyScanner
 from app.scanners.docker_scanner import DockerScanner
 
 load_dotenv()
+
+console = Console()
 
 
 def parse_args():
@@ -117,23 +122,65 @@ def run(args):
         "host": args.host or os.getenv("SSH_HOST"),
     }
 
-    for section_name, scanner_cls in SCANNERS:
-        try:
-            if not args.json:
-                print(f"[+] Running {section_name} scanner...")
-            report[section_name] = scanner_cls(client).scan()
-        except SSHConnectionError as exc:
-            print(
-                f"[FATAL] Scanner '{section_name}' failed due to an SSH error: {exc}",
-                file=sys.stderr,
+    if not args.json:
+        console.print(
+            Panel.fit(
+                "[bold]BastionGuard v1.0[/bold]\n"
+                "Linux Security Auditor",
+                title="Security Audit",
             )
-            sys.exit(1)
-        except Exception as exc:
-            print(
-                f"[FATAL] Scanner '{section_name}' raised an unexpected error: {exc}",
-                file=sys.stderr,
-            )
-            raise
+        )
+        console.print(
+            f"\n[bold]Target[/bold]\n"
+            f"  Host: {report['host']}\n"
+            f"  User: {args.user or os.getenv('SSH_USER')}\n"
+            f"  Port: {args.port or int(os.getenv('SSH_PORT'))}\n"
+        )
+
+    progress = None
+
+    if not args.json:
+        progress = Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            BarColumn(),
+            TextColumn("{task.completed}/{task.total}"),
+        )
+        progress.start()
+        task_id = progress.add_task(
+            "Running security scanners...",
+            total=len(SCANNERS),
+        )
+
+    try:
+        for section_name, scanner_cls in SCANNERS:
+            try:
+                if not args.json:
+                    progress.update(
+                        task_id,
+                        description=f"Running [bold]{section_name}[/bold] scanner...",
+                    )
+
+                report[section_name] = scanner_cls(client).scan()
+
+                if not args.json:
+                    progress.advance(task_id)
+
+            except SSHConnectionError as exc:
+                print(
+                    f"[FATAL] Scanner '{section_name}' failed due to an SSH error: {exc}",
+                    file=sys.stderr,
+                )
+                sys.exit(1)
+            except Exception as exc:
+                print(
+                    f"[FATAL] Scanner '{section_name}' raised an unexpected error: {exc}",
+                    file=sys.stderr,
+                )
+                raise
+    finally:
+        if progress is not None:
+            progress.stop()
 
     risk_result = RiskScoring.calculate(report)
     report["risk"] = risk_result
@@ -184,14 +231,32 @@ def run(args):
     if args.json:
         print(report_json)
     else:
-        print()
-        print("=" * 40)
-        print(f"Host       : {report['host']}")
-        print(f"Risk Score : {risk_result['score']}")
-        print(f"Risk Level : {risk_result['level']}")
-        print(f"Report     : {report_path}")
-        print("HTML Report: reports/latest_report.html")
-        print("=" * 40)
+        risk_level = str(risk_result["level"]).upper()
+
+        level_styles = {
+            "LOW": "green",
+            "MEDIUM": "yellow",
+            "HIGH": "red",
+            "CRITICAL": "bold red",
+        }
+
+        level_style = level_styles.get(risk_level, "white")
+
+        console.print(
+            Panel.fit(
+                f"[bold]Score:[/bold] {risk_result['score']}\n"
+                f"[bold]Level:[/bold] [{level_style}]{risk_level}[/{level_style}]",
+                title="Security Risk",
+            )
+        )
+
+        console.print(
+            Panel.fit(
+                f"JSON : {report_path}\n"
+                "HTML : reports/latest_report.html",
+                title="Reports",
+            )
+        )
 
 
 if __name__ == "__main__":
